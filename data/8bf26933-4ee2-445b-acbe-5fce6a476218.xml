@@ -1,0 +1,5 @@
+<server xmlns="eXmin">
+    <name>exist-db site</name>
+    <url>http://exist-db.org/</url>
+    <JMX>exist/status</JMX>
+</server>
