@@ -6,38 +6,61 @@ declare namespace jmx="http://exist-db.org/jmx";
 declare option exist:serialize "method=xhtml media-type=text/html";
 
 declare function local:collect-details($server) {
+	let $col := collection(concat("/db/data/",$server/@id))
 
-    (: { concat($server/eXmin:url/text(),$server/eXmin:JMX/text() } :)
-	http:send-request(
-		<http:request href="http://exist-db.org/exist/status" method="get"></http:request>
-	)
+	let $lastTS := max($col//eXmin:heartbeat/@eXmin:date/xs:dateTime(.))
+
+	return
+		$col//eXmin:heartbeat[xs:dateTime(@eXmin:date) eq $lastTS]
 };
 
 declare function local:percent($current, $max) {
-	let $tmp := util:log-system-out(concat($current," / ",$max)) return
     (number($current) div number($max)) * 100
+};
+
+declare function local:msecsToDHM($msecs) {
+	let $secs := $msecs idiv 1000
+	let $mins := $secs idiv 60
+	let $secs := $secs - ($mins * 60)
+	let $hours := $mins idiv 60
+	let $mins := $mins - ($hours * 60)
+	let $days := $hours idiv 24
+	let $hours := $hours - ($days * 24)
+
+	return
+    	concat($days," days ",$hours,":",$mins)
 };
 
 declare function local:generate-status-bars($details) {
 
 	let $db := $details/jmx:Database
+	let $uuid := util:uuid()
 	
 	return 
 	<td>
-		<div class="progress" style="margin-bottom: 2px;">
+		<div class="progress" style="margin-bottom: 2px;" onclick="$('#{$uuid}').collapse('toggle')">
 			<div class="bar" style="width: {local:percent($db/jmx:ActiveBrokers, $db/jmx:MaxBrokers)}%;"></div>
 		</div>
+		<div id="{$uuid}" class="collapse out">
 		{
-		for $cache in $details/jmx:Cache return
-		<div class="progress" style="margin-bottom: 2px;">
-			<div class="bar" style="width: {local:percent($cache/jmx:Used, $cache/jmx:Size)}%;"></div>
-		</div>
+			for $category in distinct-values($details/jmx:Cache/jmx:FileName/text()) order by $category return
+			<div>
+				{$category,
+				for $cache in $details/jmx:Cache[jmx:FileName/text() eq $category] return
+				<abbr title="{$cache/jmx:FileName/text(),' [',$cache/jmx:Type/text(),'] Hits:',$cache/jmx:Hits/text(),' Fails:',$cache/jmx:Fails/text()}">
+					<div class="progress" style="margin-bottom: 2px;">
+						<div class="bar" style="width: {local:percent($cache/jmx:Used, $cache/jmx:Size)}%;"></div>
+					</div>
+				</abbr>
+				}
+			</div>
 		}
+		</div>
 	</td>
 };
 
 declare function local:generate-status-flag($details) {
-	if ($details[1]/@status eq "200") then
+	if ($details/@http:status eq "200") then
 		<span class="badge badge-success">Ok</span>
 	else
 		<span class="label label-important">NO RESPONCE</span>
@@ -125,15 +148,17 @@ return
 						<tbody>
 						{
 							for $server in //eXmin:server return
-							let $details := local:collect-details($server) return
+							let $details := local:collect-details($server) 
+							let $tmp := util:log-system-out($details/@eXmin:date/xs:string(.))
+							return
 							<tr>
 								<td>{$server/eXmin:name}</td>
 								<td></td>
-								<td></td>
-								{local:generate-status-bars($details[2]/jmx:jmx)}
+								<td>{local:msecsToDHM($details/jmx:jmx/jmx:Database/jmx:Uptime/text()/number())}</td>
+								{local:generate-status-bars($details/jmx:jmx)}
 								<td></td>
 								<td>{local:generate-status-flag($details)}</td>
-								<td></td>
+								<td>{$details/@eXmin:date/xs:string(.)}</td>
 							</tr>
 						}
 						</tbody>
