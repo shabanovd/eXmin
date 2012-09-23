@@ -9,9 +9,33 @@ declare variable $exist:controller external;
 declare variable $exist:prefix external;
 declare variable $exist:root external;
 
+let $action := request:get-parameter("action",())
+let $URL : = concat($exist:prefix, $exist:controller, '/')
+
 let $query := request:get-parameter("q", ())
+
+let $tmp := util:log-system-out($action)
+let $tmp := util:log-system-out($exist:path)
+let $tmp := util:log-system-out($URL)
+let $tmp := util:log-system-out(sm:is-externally-authenticated())
 return
-if ($exist:path eq '') then
+if ($action eq 'logout') then
+	<dispatch xmlns="http://exist.sourceforge.net/NS/exist">
+		{session:invalidate()}
+		<redirect url="{$URL}"/>
+	</dispatch>
+
+else if ($exist:path eq '/login.xql') then
+	<ignore xmlns="http://exist.sourceforge.net/NS/exist">
+		<cache-control cache="yes"/>
+	</ignore>
+
+else if (not (sm:is-externally-authenticated())) then
+	<dispatch xmlns="http://exist.sourceforge.net/NS/exist">
+		<redirect url="{concat($URL, "login.xql")}"/>
+	</dispatch>
+
+else if ($exist:path eq '') then
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
         <redirect url="{concat(request:get-uri(), '/')}"/>
     </dispatch>
