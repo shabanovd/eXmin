@@ -26,10 +26,6 @@ import java.util.Enumeration;
 
 import org.apache.activemq.broker.BrokerFactory;
 import org.apache.activemq.broker.BrokerService;
-import org.apache.activemq.broker.region.policy.FixedCountSubscriptionRecoveryPolicy;
-import org.apache.activemq.broker.region.policy.PolicyEntry;
-import org.apache.activemq.broker.region.policy.PolicyMap;
-import org.apache.activemq.broker.region.policy.RoundRobinDispatchPolicy;
 import org.apache.log4j.Category;
 import org.apache.log4j.Logger;
 import org.apache.log4j.net.JMSAppender;
@@ -49,7 +45,7 @@ import org.exist.storage.DBBroker;
 public class Plugin implements Jack, Startable {
 	
 	protected BrokerService broker;
-	protected PolicyMap policyMap = new PolicyMap();
+	protected Subscriber subscriber;
 	
 	public Plugin(PluginsManager manager) throws ConfigurationException {
 		System.out.println("run logger");
@@ -61,7 +57,7 @@ public class Plugin implements Jack, Startable {
 			throw new ConfigurationException(e);
 		}
 		
-		Subscriber subscriber = new Subscriber();
+		subscriber = new Subscriber();
 		
 		System.out.println("create appender");
 		
@@ -94,19 +90,9 @@ public class Plugin implements Jack, Startable {
 		broker.setBrokerName("eXmin");
 //		broker.addConnector("tcp://localhost:61616");
 		
-//		policyMap.setDefaultEntry(getDefaultPolicy());
-//		broker.setDestinationPolicy(policyMap);
-
 		broker.start();
 	}
 	
-	protected PolicyEntry getDefaultPolicy() {
-		PolicyEntry policy = new PolicyEntry();
-		policy.setDispatchPolicy(new RoundRobinDispatchPolicy());
-		policy.setSubscriptionRecoveryPolicy(new FixedCountSubscriptionRecoveryPolicy());
-		return policy;
-	}
-	 
 	@Override
 	public void startUp(DBBroker broker) throws EXistException {
 		// TODO Auto-generated method stub
@@ -121,6 +107,8 @@ public class Plugin implements Jack, Startable {
 
 	@Override
 	public void stop() {
+		subscriber.shutdown();
+		
 		try {
 			broker.stop();
 		} catch (Exception e) {
