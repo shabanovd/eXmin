@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<job id="6fbb0fc1-9e0b-4ca3-bc67-a0d8528c603d"><name>heartbeats</name><group>eXmin</group><run-as-account>admin</run-as-account><script-uri>/db/eXmin/collect-heartbeats.xq</script-uri><cron-expression>0 * * * * ?</cron-expression></job>
