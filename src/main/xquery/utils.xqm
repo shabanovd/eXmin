@@ -25,7 +25,7 @@ declare function utils:msecsToDHM($msecs) {
 declare function utils:format-part($function, $name, $duration) {
     let $suffix := 
         if ($name) then 
-            if (string-length($name) = 1) then 
+            if (string-length($name) eq 1) then 
                 concat($name, " ") 
             else 
                 concat(" ", $name, " ") 
