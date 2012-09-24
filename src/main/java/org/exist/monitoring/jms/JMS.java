@@ -23,12 +23,8 @@ package org.exist.monitoring.jms;
 
 import java.util.Properties;
 
-import javax.jms.JMSException;
-import javax.jms.Session;
 import javax.jms.Topic;
-import javax.jms.TopicConnection;
 import javax.jms.TopicConnectionFactory;
-import javax.jms.TopicSession;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
@@ -48,13 +44,10 @@ public class JMS {
 	public static String providerURL = "tcp://localhost:61616";
 	
     protected Context jndiContext = null;
-    public TopicConnectionFactory  topicConnectionFactory = null;
+    public TopicConnectionFactory  connectionFactory = null;
 
     public Topic topic = null;
     
-    protected TopicConnection topicConnection = null;
-    protected TopicSession topicSession = null;
-
     public JMS() throws ConfigurationException {
         try {
         	Properties env = new Properties();
@@ -68,17 +61,10 @@ public class JMS {
         
         
         try {
-            topicConnectionFactory = (TopicConnectionFactory) jndiContext.lookup("ConnectionFactory");
+            connectionFactory = (TopicConnectionFactory) jndiContext.lookup("ConnectionFactory");
             topic = (Topic) jndiContext.lookup(topicName);
         } catch (NamingException e) {
         	throw new ConfigurationException(e);
         }
-        
-        try {
-	        topicConnection = topicConnectionFactory.createTopicConnection();
-	        topicSession = topicConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
-        } catch (JMSException e) {
-        	throw new ConfigurationException(e);
-		}
 	}
 }

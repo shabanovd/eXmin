@@ -22,6 +22,9 @@
 package org.exist.monitoring.jms;
 
 import javax.jms.JMSException;
+import javax.jms.Session;
+import javax.jms.TopicConnection;
+import javax.jms.TopicSession;
 import javax.jms.TopicSubscriber;
 
 import org.exist.config.ConfigurationException;
@@ -30,28 +33,37 @@ import org.exist.config.ConfigurationException;
  * @author <a href="mailto:shabanovd@gmail.com">Dmitriy Shabanov</a>
  *
  */
-public class Subscriber extends JMS {
+public class Subscriber {
 	
-    protected TopicSubscriber topicSubscriber = null;
-    MessagersListener topicListener = null;
+    protected TopicConnection connection = null;
+    protected TopicSession session = null;
 
-    public Subscriber() throws ConfigurationException {
+    protected TopicSubscriber subscriber = null;
+    protected MessagersListener listener = null;
+
+    public Subscriber(JMS jms) throws ConfigurationException {
 		super();
                 
         try {
-            topicSubscriber = topicSession.createSubscriber(topic);
-            topicListener = new MessagersListener();
-            topicSubscriber.setMessageListener(topicListener);
-            topicConnection.start();
+	        connection = jms.connectionFactory.createTopicConnection();
+
+	        session = connection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
+
+            subscriber = session.createSubscriber(jms.topic);
+            listener = new MessagersListener();
+            subscriber.setMessageListener(listener);
+            
+            connection.start();
+        
         } catch (JMSException e) {
         	throw new ConfigurationException(e);
         }
     }
 	
 	public void shutdown() {
-        if (topicConnection != null) {
+        if (connection != null) {
             try {
-                topicConnection.close();
+                connection.close();
             } catch (JMSException e) {}
         }
 	}

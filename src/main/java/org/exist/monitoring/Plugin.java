@@ -21,18 +21,17 @@
  */
 package org.exist.monitoring;
 
-import java.net.URI;
 import java.util.Enumeration;
 
 import javax.jms.TopicConnectionFactory;
 
-import org.apache.activemq.broker.BrokerFactory;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.log4j.Category;
 import org.apache.log4j.Logger;
 import org.exist.EXistException;
 import org.exist.config.ConfigurationException;
 import org.exist.config.Startable;
+import org.exist.monitoring.jms.Broker;
+import org.exist.monitoring.jms.JMS;
 import org.exist.monitoring.jms.JMSSender;
 import org.exist.monitoring.jms.Subscriber;
 import org.exist.plugin.Jack;
@@ -45,27 +44,31 @@ import org.exist.storage.DBBroker;
  */
 public class Plugin implements Jack, Startable {
 	
-	protected BrokerService broker;
+	protected Broker broker;
 	protected Subscriber subscriber;
 	
 	public Plugin(PluginsManager manager) throws ConfigurationException {
 		System.out.println("run logger");
 		
 		System.out.println("running broker");
+		broker = new Broker();
 		try {
-			runBroker();
+			broker.start();
 		} catch (Exception e) {
 			throw new ConfigurationException(e);
 		}
-		subscriber = new Subscriber();
+		
+		JMS jms = new JMS();
+		
+		subscriber = new Subscriber(jms);
 		
 		System.out.println("create appender");
 		
 		JMSSender sender = new JMSSender();
 		
-		TopicConnectionFactory cf = subscriber.topicConnectionFactory;
+		TopicConnectionFactory cf = jms.connectionFactory;
 		sender.setConnectionFactory(cf);
-		sender.setTopic(subscriber.topic);
+		sender.setTopic(jms.topic);
 		
 		SenderAppender appender = new SenderAppender(sender);
 		appender.setName("JMX log appender");
@@ -83,45 +86,18 @@ public class Plugin implements Jack, Startable {
 		System.out.println("done.");
 	}
 
-	private void runBroker() throws Exception {
-		broker = BrokerFactory.createBroker(
-			new URI("broker:tcp://localhost:61616")
-		);
-		
-		broker.setBrokerName("eXmin");
-		broker.setUseJmx(false);
-		broker.setPersistent(false);
-		
-//		broker.setSslContext(
-//			new SslContext()
-//		);
-
-//		broker.addConnector("tcp://localhost:61616?needClientAuth=true");
-		
-		broker.start();
-	}
-	
 	@Override
 	public void startUp(DBBroker broker) throws EXistException {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void sync() {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void stop() {
 		subscriber.shutdown();
 		
-		try {
-			broker.stop();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		broker.stop();
 	}
-
 }

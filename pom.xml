@@ -5,4 +5,20 @@
   <version>0.0.1-SNAPSHOT</version>
   <name>eXmin</name>
   <description>eXist-db servers monitoring and administration</description>
+  
+  <dependencies>
+	<dependency>
+		<groupId>org.springframework</groupId>
+		<artifactId>spring-jms</artifactId>
+		<version>3.1.2.RELEASE</version>
+	</dependency>
+  </dependencies>
+
+  <repositories>
+  	<repository>
+		<id>springsource-repo</id>
+		<name>SpringSource Repository</name>
+		<url>http://repo.springsource.org/release</url>
+	</repository>
+  </repositories>
 </project>
