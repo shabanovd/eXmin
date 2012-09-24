@@ -30,8 +30,6 @@ import org.apache.log4j.Logger;
 import org.exist.EXistException;
 import org.exist.config.ConfigurationException;
 import org.exist.config.Startable;
-import org.exist.monitoring.jms.Broker;
-import org.exist.monitoring.jms.JMS;
 import org.exist.monitoring.jms.JMSSender;
 import org.exist.monitoring.jms.Subscriber;
 import org.exist.plugin.Jack;
@@ -44,31 +42,23 @@ import org.exist.storage.DBBroker;
  */
 public class Plugin implements Jack, Startable {
 	
-	protected Broker broker;
 	protected Subscriber subscriber;
 	
-	public Plugin(PluginsManager manager) throws ConfigurationException {
+	MonitoringManager manager;
+	
+	public Plugin(PluginsManager pm) throws ConfigurationException {
+		
 		System.out.println("run logger");
-		
-		System.out.println("running broker");
-		broker = new Broker();
-		try {
-			broker.start();
-		} catch (Exception e) {
-			throw new ConfigurationException(e);
-		}
-		
-		JMS jms = new JMS();
-		
-		subscriber = new Subscriber(jms);
+
+		manager = new MonitoringManager(pm.getDatabase());
 		
 		System.out.println("create appender");
 		
 		JMSSender sender = new JMSSender();
 		
-		TopicConnectionFactory cf = jms.connectionFactory;
+		TopicConnectionFactory cf = manager.jms.connectionFactory;
 		sender.setConnectionFactory(cf);
-		sender.setTopic(jms.topic);
+		sender.setTopic(manager.jms.topic);
 		
 		SenderAppender appender = new SenderAppender(sender);
 		appender.setName("JMX log appender");
@@ -88,6 +78,7 @@ public class Plugin implements Jack, Startable {
 
 	@Override
 	public void startUp(DBBroker broker) throws EXistException {
+		manager.startUp(broker);
 	}
 
 	@Override
@@ -96,8 +87,6 @@ public class Plugin implements Jack, Startable {
 
 	@Override
 	public void stop() {
-		subscriber.shutdown();
-		
-		broker.stop();
+		manager.shutdown();
 	}
 }

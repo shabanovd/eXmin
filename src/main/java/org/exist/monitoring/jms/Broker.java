@@ -25,20 +25,42 @@ import java.net.URI;
 
 import org.apache.activemq.broker.BrokerFactory;
 import org.apache.activemq.broker.BrokerService;
+import org.exist.config.Configurable;
+import org.exist.config.Configuration;
 import org.exist.config.ConfigurationException;
+import org.exist.config.Configurator;
+import org.exist.config.annotation.ConfigurationClass;
+import org.exist.config.annotation.ConfigurationFieldAsAttribute;
+import org.exist.config.annotation.ConfigurationFieldAsElement;
+import org.exist.monitoring.MonitoringManager;
 
 /**
  * @author <a href="mailto:shabanovd@gmail.com">Dmitriy Shabanov</a>
  *
  */
-public class Broker {
+@ConfigurationClass("service-broker")
+public class Broker implements Configurable {
 	
-	protected BrokerService broker;
+	@ConfigurationFieldAsAttribute("id")
+	protected String id;
 
-	public Broker() throws ConfigurationException {
+	@ConfigurationFieldAsElement("uri")
+	protected String uri = "broker:tcp://localhost:61616";
+
+	private BrokerService broker;
+	
+	private Configuration configuration = null;
+	private MonitoringManager manager;
+	
+	public Broker(MonitoringManager manager, Configuration config) throws ConfigurationException {
+
+		this.manager = manager;
+		
+        configuration = Configurator.configure(this, config);
+
 		try {
 			broker = BrokerFactory.createBroker(
-				new URI("broker:tcp://localhost:61616")
+				new URI(uri)
 			);
 		} catch (Exception e) {
 			throw new ConfigurationException(e);
@@ -66,5 +88,15 @@ public class Broker {
 			//TODO: log
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public boolean isConfigured() {
+		return configuration != null;
+	}
+
+	@Override
+	public Configuration getConfiguration() {
+		return configuration;
 	}
 }
