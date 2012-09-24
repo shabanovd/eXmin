@@ -42,14 +42,15 @@ import org.exist.config.ConfigurationException;
 public class JMS {
 
 	public static final String topicName = "dynamicTopics/eXmin-logging";
+	public static final String queryName = "dynamicQueue/eXmin-logging";
 	
 	public static String initialContextFactoryName = "org.apache.activemq.jndi.ActiveMQInitialContextFactory";
 	public static String providerURL = "tcp://localhost:61616";
 	
     protected Context jndiContext = null;
-    protected TopicConnectionFactory  topicConnectionFactory = null;
+    public TopicConnectionFactory  topicConnectionFactory = null;
 
-    protected Topic topic = null;
+    public Topic topic = null;
     
     protected TopicConnection topicConnection = null;
     protected TopicSession topicSession = null;

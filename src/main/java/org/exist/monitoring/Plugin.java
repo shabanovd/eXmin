@@ -24,15 +24,16 @@ package org.exist.monitoring;
 import java.net.URI;
 import java.util.Enumeration;
 
+import javax.jms.TopicConnectionFactory;
+
 import org.apache.activemq.broker.BrokerFactory;
 import org.apache.activemq.broker.BrokerService;
 import org.apache.log4j.Category;
 import org.apache.log4j.Logger;
-import org.apache.log4j.net.JMSAppender;
 import org.exist.EXistException;
 import org.exist.config.ConfigurationException;
 import org.exist.config.Startable;
-import org.exist.monitoring.jms.JMS;
+import org.exist.monitoring.jms.JMSSender;
 import org.exist.monitoring.jms.Subscriber;
 import org.exist.plugin.Jack;
 import org.exist.plugin.PluginsManager;
@@ -56,20 +57,18 @@ public class Plugin implements Jack, Startable {
 		} catch (Exception e) {
 			throw new ConfigurationException(e);
 		}
-		
 		subscriber = new Subscriber();
 		
 		System.out.println("create appender");
 		
-		JMSAppender appender = new JMSAppender();
+		JMSSender sender = new JMSSender();
 		
+		TopicConnectionFactory cf = subscriber.topicConnectionFactory;
+		sender.setConnectionFactory(cf);
+		sender.setTopic(subscriber.topic);
+		
+		SenderAppender appender = new SenderAppender(sender);
 		appender.setName("JMX log appender");
-		appender.setInitialContextFactoryName("org.apache.activemq.jndi.ActiveMQInitialContextFactory");
-		//'failover' - mean reconnect if connection gets down
-		appender.setProviderURL("failover:tcp://localhost:61616");
-		appender.setTopicBindingName(JMS.topicName);
-		appender.setTopicConnectionFactoryBindingName("ConnectionFactory");
-		appender.activateOptions();
 		
 		System.out.println("adding appender");
 
@@ -85,10 +84,19 @@ public class Plugin implements Jack, Startable {
 	}
 
 	private void runBroker() throws Exception {
-		broker = BrokerFactory.createBroker(new URI("broker:tcp://localhost:61616"));
+		broker = BrokerFactory.createBroker(
+			new URI("broker:tcp://localhost:61616")
+		);
 		
 		broker.setBrokerName("eXmin");
-//		broker.addConnector("tcp://localhost:61616");
+		broker.setUseJmx(false);
+		broker.setPersistent(false);
+		
+//		broker.setSslContext(
+//			new SslContext()
+//		);
+
+//		broker.addConnector("tcp://localhost:61616?needClientAuth=true");
 		
 		broker.start();
 	}
