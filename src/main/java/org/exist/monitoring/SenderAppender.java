@@ -23,7 +23,9 @@ package org.exist.monitoring;
 
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Priority;
+import org.apache.log4j.spi.LocationInfo;
 import org.apache.log4j.spi.LoggingEvent;
+import org.apache.log4j.spi.ThrowableInformation;
 
 /**
  * @author <a href="mailto:shabanovd@gmail.com">Dmitriy Shabanov</a>
@@ -50,7 +52,45 @@ public class SenderAppender extends AppenderSkeleton {
 	protected void append(LoggingEvent event) {
 		//ignore DEBUG logs
 		if (event.getLevel().toInt() > Priority.DEBUG_INT)
-			sender.send(event);
+			sender.send(generateXMLmessage(event));
+	}
+	
+	private String generateXMLmessage(LoggingEvent event) {
+		StringBuilder sb = new StringBuilder();
+		
+		sb
+			.append("<logging-event xmlns='eXmin'")
+			.append(" level='").append(event.getLevel()).append("'")
+			.append(" timestamp='").append(event.getTimeStamp()).append("'")
+			.append(" >");
+		
+		sb.append("<level>").append(event.getLevel()).append("</level>");
+		sb.append("<thread>").append(event.getThreadName()).append("</thread>");
+				
+		final LocationInfo loc = event.getLocationInformation();
+
+		sb
+			.append("<location ")
+			.append(" class-name='").append(loc.getClassName()).append("'")
+			.append(" method='").append(loc.getMethodName()).append("'")
+			.append(" line-number='").append(loc.getLineNumber()).append("'")
+			.append(" />");
+
+		sb.append("<message>").append(event.getMessage()).append("</message>");
+
+		ThrowableInformation th = event.getThrowableInformation();
+		if (th != null) {
+			sb.append("<throwable-information>");
+			String[] strs = th.getThrowableStrRep();
+			for (int i = 0; i < strs.length; i++) {
+				sb.append(strs[i]);
+			}
+			sb.append("</throwable-information>");
+		}
+
+		sb.append("</logging-event>");
+		
+		return sb.toString();
 	}
 
 }
