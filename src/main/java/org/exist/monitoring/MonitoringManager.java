@@ -31,7 +31,7 @@ import org.exist.collections.Collection;
 import org.exist.config.*;
 import org.exist.config.annotation.*;
 import org.exist.monitoring.jms.*;
-import org.exist.plugin.Jack;
+import org.exist.plugin.Plug;
 import org.exist.plugin.PluginsManager;
 import org.exist.security.PermissionDeniedException;
 import org.exist.storage.DBBroker;
@@ -43,8 +43,8 @@ import org.exist.xmldb.XmldbURI;
  * @author <a href="mailto:shabanovd@gmail.com">Dmitriy Shabanov</a>
  *
  */
-@ConfigurationClass("minitoring")
-public class MonitoringManager implements Jack, Configurable, Startable {
+@ConfigurationClass("monitoring")
+public class MonitoringManager implements Plug, Configurable, Startable {
 
 	/* /db/system/monitoring */
 	private final static XmldbURI COLLECTION_URI = XmldbURI.SYSTEM.append("monitoring");
