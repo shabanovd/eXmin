@@ -29,26 +29,52 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import org.exist.EXistException;
+import org.exist.config.Configurable;
+import org.exist.config.Configuration;
 import org.exist.config.ConfigurationException;
+import org.exist.config.Configurator;
+import org.exist.config.Startable;
+import org.exist.config.annotation.ConfigurationClass;
+import org.exist.config.annotation.ConfigurationFieldAsAttribute;
+import org.exist.config.annotation.ConfigurationFieldAsElement;
+import org.exist.monitoring.MonitoringManager;
+import org.exist.storage.DBBroker;
 
 /**
  * @author <a href="mailto:shabanovd@gmail.com">Dmitriy Shabanov</a>
  *
  */
-public class JMS {
+@ConfigurationClass("JMS")
+public class JMS implements Configurable, Startable {
 
-	public static final String topicName = "dynamicTopics/eXmin-logging";
-	public static final String queryName = "dynamicQueue/eXmin-logging";
-	
 	public static String initialContextFactoryName = "org.apache.activemq.jndi.ActiveMQInitialContextFactory";
-	public static String providerURL = "tcp://localhost:61616";
-	
-    protected Context jndiContext = null;
-    public TopicConnectionFactory  connectionFactory = null;
+//	public static final String queryName = "dynamicQueue/eXmin-logging";
 
+	@ConfigurationFieldAsAttribute("id")
+	public String id;
+
+	@ConfigurationFieldAsElement("topic")
+	public String topicName = "dynamicTopics/eXmin-logging";
+	
+	@ConfigurationFieldAsElement("provider-url")
+	public String providerURL = "tcp://localhost:61616";
+	
+    private Context jndiContext = null;
+    
+    public TopicConnectionFactory  connectionFactory = null;
     public Topic topic = null;
     
-    public JMS() throws ConfigurationException {
+	private Configuration configuration = null;
+
+	public JMS(MonitoringManager manager, Configuration config) throws ConfigurationException {
+//		this.manager = manager;
+		
+        configuration = Configurator.configure(this, config);
+	}
+    
+	@Override
+	public void startUp(DBBroker broker) throws EXistException {
         try {
         	Properties env = new Properties();
         	env.put(Context.INITIAL_CONTEXT_FACTORY, initialContextFactoryName);
@@ -59,12 +85,21 @@ public class JMS {
         	throw new ConfigurationException(e);
         }
         
-        
         try {
             connectionFactory = (TopicConnectionFactory) jndiContext.lookup("ConnectionFactory");
             topic = (Topic) jndiContext.lookup(topicName);
         } catch (NamingException e) {
         	throw new ConfigurationException(e);
         }
+    }
+
+	@Override
+	public boolean isConfigured() {
+		return configuration != null;
+	}
+
+	@Override
+	public Configuration getConfiguration() {
+		return configuration;
 	}
 }

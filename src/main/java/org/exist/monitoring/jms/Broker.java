@@ -25,21 +25,24 @@ import java.net.URI;
 
 import org.apache.activemq.broker.BrokerFactory;
 import org.apache.activemq.broker.BrokerService;
+import org.exist.EXistException;
 import org.exist.config.Configurable;
 import org.exist.config.Configuration;
 import org.exist.config.ConfigurationException;
 import org.exist.config.Configurator;
+import org.exist.config.Startable;
 import org.exist.config.annotation.ConfigurationClass;
 import org.exist.config.annotation.ConfigurationFieldAsAttribute;
 import org.exist.config.annotation.ConfigurationFieldAsElement;
 import org.exist.monitoring.MonitoringManager;
+import org.exist.storage.DBBroker;
 
 /**
  * @author <a href="mailto:shabanovd@gmail.com">Dmitriy Shabanov</a>
  *
  */
 @ConfigurationClass("service-broker")
-public class Broker implements Configurable {
+public class Broker implements Configurable, Startable {
 	
 	@ConfigurationFieldAsAttribute("id")
 	protected String id;
@@ -47,7 +50,9 @@ public class Broker implements Configurable {
 	@ConfigurationFieldAsElement("uri")
 	protected String uri = "broker:tcp://localhost:61616";
 
-	private BrokerService broker;
+	private BrokerService serviceBroker;
+
+	private Subscriber subscriber = null;
 	
 	private Configuration configuration = null;
 	private MonitoringManager manager;
@@ -59,16 +64,16 @@ public class Broker implements Configurable {
         configuration = Configurator.configure(this, config);
 
 		try {
-			broker = BrokerFactory.createBroker(
+			serviceBroker = BrokerFactory.createBroker(
 				new URI(uri)
 			);
 		} catch (Exception e) {
 			throw new ConfigurationException(e);
 		}
 			
-		broker.setBrokerName("eXmin");
-		broker.setUseJmx(false);
-		broker.setPersistent(false);
+		serviceBroker.setBrokerName("eXmin");
+		serviceBroker.setUseJmx(false);
+		serviceBroker.setPersistent(false);
 		
 //		broker.setSslContext(
 //			new SslContext()
@@ -77,13 +82,27 @@ public class Broker implements Configurable {
 //		broker.addConnector("tcp://localhost:61616?needClientAuth=true");
 	}
 	
-	public void start() throws Exception {
-		broker.start();
+
+	@Override
+	public void startUp(DBBroker broker) throws EXistException {
+		if (serviceBroker.isStarted())
+			return;
+		
+		try {
+			serviceBroker.start();
+		} catch (Exception e) {
+			throw new EXistException(e);
+		}
+		
+		subscriber = new Subscriber(manager.jms);
 	}
 	
 	public void stop() {
+		
+		subscriber.shutdown();
+
 		try {
-			broker.stop();
+			serviceBroker.stop();
 		} catch (Exception e) {
 			//TODO: log
 			e.printStackTrace();

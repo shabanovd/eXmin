@@ -30,9 +30,9 @@ import org.exist.EXistException;
 import org.exist.collections.Collection;
 import org.exist.config.*;
 import org.exist.config.annotation.*;
-import org.exist.monitoring.jms.Broker;
-import org.exist.monitoring.jms.JMS;
-import org.exist.monitoring.jms.Subscriber;
+import org.exist.monitoring.jms.*;
+import org.exist.plugin.Jack;
+import org.exist.plugin.PluginsManager;
 import org.exist.security.PermissionDeniedException;
 import org.exist.storage.DBBroker;
 import org.exist.storage.txn.TransactionManager;
@@ -44,7 +44,7 @@ import org.exist.xmldb.XmldbURI;
  *
  */
 @ConfigurationClass("minitoring")
-public class MonitoringManager implements Configurable, Startable {
+public class MonitoringManager implements Jack, Configurable, Startable {
 
 	/* /db/system/monitoring */
 	private final static XmldbURI COLLECTION_URI = XmldbURI.SYSTEM.append("monitoring");
@@ -57,15 +57,15 @@ public class MonitoringManager implements Configurable, Startable {
     @ConfigurationFieldClassMask("org.exist.monitoring.Broker")
     private List<Broker> serviceBrokers = new ArrayList<Broker>();
     
-	protected JMS jms = null;
-	protected Subscriber subscriber = null;
-
+	@ConfigurationFieldAsElement("JMS")
+	public JMS jms = null;
+	
 	protected Database db;
 	private Collection collection = null;
 	private Configuration configuration = null;
 	
-	public MonitoringManager(Database db) {
-		this.db = db;
+	public MonitoringManager(PluginsManager pm) {
+		db = pm.getDatabase();
 	}
 
 	@Override
@@ -107,13 +107,20 @@ public class MonitoringManager implements Configurable, Startable {
         Configuration _config_ = Configurator.parse(this, broker, collection, CONFIG_FILE_URI);
         configuration = Configurator.configure(this, _config_);
         
-		JMS jms = new JMS();
-		
-		subscriber = new Subscriber(jms);
 	}
 	
 	public void addServiceBroker(Configuration config) throws ConfigurationException {
 		serviceBrokers.add( new Broker(this, config) );
+	}
+
+	@Override
+	public void sync() {
+	}
+
+	@Override
+	public void stop() {
+		for (Broker broker : serviceBrokers)
+			broker.stop();
 	}
 
 	@Override
@@ -124,12 +131,5 @@ public class MonitoringManager implements Configurable, Startable {
 	@Override
 	public Configuration getConfiguration() {
 		return configuration;
-	}
-
-	public void shutdown() {
-		subscriber.shutdown();
-		
-		for (Broker broker : serviceBrokers)
-			broker.stop();
 	}
 }

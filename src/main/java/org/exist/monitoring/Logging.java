@@ -27,32 +27,15 @@ import javax.jms.TopicConnectionFactory;
 
 import org.apache.log4j.Category;
 import org.apache.log4j.Logger;
-import org.exist.EXistException;
-import org.exist.config.ConfigurationException;
-import org.exist.config.Startable;
 import org.exist.monitoring.jms.JMSSender;
-import org.exist.monitoring.jms.Subscriber;
-import org.exist.plugin.Jack;
-import org.exist.plugin.PluginsManager;
-import org.exist.storage.DBBroker;
 
 /**
  * @author <a href="mailto:shabanovd@gmail.com">Dmitriy Shabanov</a>
  *
  */
-public class Plugin implements Jack, Startable {
+public class Logging {
 	
-	protected Subscriber subscriber;
-	
-	MonitoringManager manager;
-	
-	public Plugin(PluginsManager pm) throws ConfigurationException {
-		
-		System.out.println("run logger");
-
-		manager = new MonitoringManager(pm.getDatabase());
-		
-		System.out.println("create appender");
+	public Logging(MonitoringManager manager) {
 		
 		JMSSender sender = new JMSSender();
 		
@@ -73,20 +56,6 @@ public class Plugin implements Jack, Startable {
 		while (cats.hasMoreElements()) {
 			cats.nextElement().addAppender(appender);
 		}
-		System.out.println("done.");
 	}
 
-	@Override
-	public void startUp(DBBroker broker) throws EXistException {
-		manager.startUp(broker);
-	}
-
-	@Override
-	public void sync() {
-	}
-
-	@Override
-	public void stop() {
-		manager.shutdown();
-	}
 }
