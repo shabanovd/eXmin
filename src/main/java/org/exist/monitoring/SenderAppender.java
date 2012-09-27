@@ -33,9 +33,11 @@ import org.apache.log4j.spi.ThrowableInformation;
  */
 public class SenderAppender extends AppenderSkeleton {
 
+	private MonitoringManager manager;
 	private Sender sender;
 	
-	public SenderAppender(Sender sender) {
+	public SenderAppender(MonitoringManager manager, Sender sender) {
+		this.manager = manager;
 		this.sender = sender;
 	}
 
@@ -51,8 +53,13 @@ public class SenderAppender extends AppenderSkeleton {
 	@Override
 	protected void append(LoggingEvent event) {
 		//ignore DEBUG logs
-		if (event.getLevel().toInt() > Priority.DEBUG_INT)
-			sender.send(generateXMLmessage(event));
+//		if (active && event.getLevel().toInt() > Priority.DEBUG_INT)
+			try {
+				sender.send(generateXMLmessage(event));
+			} catch (Exception e) {
+				e.printStackTrace();
+//				active = false;
+			}
 	}
 	
 	private String generateXMLmessage(LoggingEvent event) {
@@ -60,9 +67,10 @@ public class SenderAppender extends AppenderSkeleton {
 		
 		sb
 			.append("<logging-event xmlns='eXmin'")
+			.append(" instance-id='").append(manager.getInstandeId()).append("'")
 			.append(" level='").append(event.getLevel()).append("'")
 			.append(" timestamp='").append(event.getTimeStamp()).append("'")
-			.append(" >");
+			.append(">");
 		
 		sb.append("<level>").append(event.getLevel()).append("</level>");
 		sb.append("<thread>").append(event.getThreadName()).append("</thread>");
@@ -70,7 +78,7 @@ public class SenderAppender extends AppenderSkeleton {
 		final LocationInfo loc = event.getLocationInformation();
 
 		sb
-			.append("<location ")
+			.append("<location")
 			.append(" class-name='").append(loc.getClassName()).append("'")
 			.append(" method='").append(loc.getMethodName()).append("'")
 			.append(" line-number='").append(loc.getLineNumber()).append("'")

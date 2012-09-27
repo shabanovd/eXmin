@@ -23,6 +23,7 @@ package org.exist.monitoring;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.log4j.Logger;
 import org.exist.Database;
@@ -51,15 +52,18 @@ public class MonitoringManager implements Plug, Configurable, Startable {
 	private final static XmldbURI CONFIG_FILE_URI = XmldbURI.create("config.xml");
 	
     private final static Logger LOG = Logger.getLogger(MonitoringManager.class);
+    
+    @ConfigurationFieldAsAttribute("instance-id")
+    private String instanceId = UUID.randomUUID().toString();
 	
     @ConfigurationFieldAsElement("service-broker")
     @ConfigurationReferenceBy("id")
-    @ConfigurationFieldClassMask("org.exist.monitoring.Broker")
+    @ConfigurationFieldClassMask("org.exist.monitoring.jms.Broker")
     private List<Broker> serviceBrokers = new ArrayList<Broker>();
     
-	@ConfigurationFieldAsElement("JMS")
-	public JMS jms = null;
-	
+	@ConfigurationFieldAsElement("logs")
+	public Logs logs = null;
+
 	protected Database db;
 	private Collection collection = null;
 	private Configuration configuration = null;
@@ -107,6 +111,19 @@ public class MonitoringManager implements Plug, Configurable, Startable {
         Configuration _config_ = Configurator.parse(this, broker, collection, CONFIG_FILE_URI);
         configuration = Configurator.configure(this, _config_);
         
+        for (Broker serviceBroker : serviceBrokers) {
+//    		if (!serviceBroker.isStarted())
+        	serviceBroker.start(broker);
+        }
+        
+//		if (!logs.isStarted())
+			logs.start(broker);
+		
+        System.out.println("monitoring started up");
+	}
+	
+	public String getInstandeId() {
+		return instanceId;
 	}
 	
 	public void addServiceBroker(Configuration config) throws ConfigurationException {
@@ -115,12 +132,25 @@ public class MonitoringManager implements Plug, Configurable, Startable {
 
 	@Override
 	public void sync() {
+        for (Broker serviceBroker : serviceBrokers)
+        	serviceBroker.sync(null);
 	}
 
 	@Override
 	public void stop() {
+		if (logs != null)
+			try {
+				logs.stop(null);
+			} catch (EXistException e) {
+				e.printStackTrace();
+			}
+		
 		for (Broker broker : serviceBrokers)
-			broker.stop();
+			try {
+				broker.stop(null);
+			} catch (EXistException e) {
+				e.printStackTrace();
+			}
 	}
 
 	@Override

@@ -21,8 +21,6 @@
  */
 package org.exist.monitoring.jms;
 
-import java.io.Serializable;
-
 import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
 import javax.jms.JMSException;
@@ -56,10 +54,11 @@ public class JMSSender implements Sender {
         destination = topic;
     }
 
-    public void send(final Serializable object) {
+    public void send(final String object) {
+    	System.out.println(object);
         this.jmsTemplate.send(this.destination, new MessageCreator() {
             public Message createMessage(Session session) throws JMSException {
-              return session.createObjectMessage(object);
+              return session.createTextMessage(object);
             }
         });
     }

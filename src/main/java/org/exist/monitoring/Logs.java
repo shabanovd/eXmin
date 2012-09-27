@@ -19,83 +19,86 @@
  *
  *  $Id$
  */
-package org.exist.monitoring.jms;
+package org.exist.monitoring;
 
-import java.util.Properties;
+import java.util.Enumeration;
 
-import javax.jms.Topic;
 import javax.jms.TopicConnectionFactory;
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 
+import org.apache.log4j.Category;
+import org.apache.log4j.Logger;
 import org.exist.EXistException;
 import org.exist.LifeCycle;
 import org.exist.config.Configurable;
 import org.exist.config.Configuration;
-import org.exist.config.ConfigurationException;
 import org.exist.config.Configurator;
 import org.exist.config.annotation.ConfigurationClass;
-import org.exist.config.annotation.ConfigurationFieldAsAttribute;
 import org.exist.config.annotation.ConfigurationFieldAsElement;
+import org.exist.monitoring.jms.JMS;
+import org.exist.monitoring.jms.JMSSender;
+import org.exist.monitoring.jms.Collector;
 import org.exist.storage.DBBroker;
 
 /**
  * @author <a href="mailto:shabanovd@gmail.com">Dmitriy Shabanov</a>
  *
  */
-@ConfigurationClass("JMS")
-public class JMS implements Configurable, LifeCycle {
-
-	public static String initialContextFactoryName = "org.apache.activemq.jndi.ActiveMQInitialContextFactory";
-//	public static final String queryName = "dynamicQueue/eXmin-logging";
-
-	@ConfigurationFieldAsAttribute("id")
-	public String id;
-
-	@ConfigurationFieldAsElement("topic")
-	public String topicName = "dynamicTopics/eXmin-logging";
+@ConfigurationClass("logs")
+public class Logs implements Configurable, LifeCycle {
 	
-	@ConfigurationFieldAsElement("provider-url")
-	public String providerURL = "tcp://localhost:61616";
+	@ConfigurationFieldAsElement("JMS")
+	public JMS jms = null;
 	
-    private Context jndiContext = null;
-    
-    public TopicConnectionFactory  connectionFactory = null;
-    public Topic topic = null;
-    
+	@ConfigurationFieldAsElement("collector")
+	private Collector collector = null;
+	
+	private SenderAppender appender;
+	
+	private MonitoringManager manager;
 	private Configuration configuration = null;
 
-	public JMS(Configuration config) throws ConfigurationException {
-//		this.manager = manager;
+	public Logs(MonitoringManager manager, Configuration config) {
+		
+		this.manager = manager;
 		
         configuration = Configurator.configure(this, config);
 	}
-    
+
 	@Override
 	public void startUp(DBBroker broker) throws EXistException {
 		start(broker);
-    }
+	}
 
 	@Override
 	public void start(DBBroker broker) throws EXistException {
-        try {
-        	Properties env = new Properties();
-        	env.put(Context.INITIAL_CONTEXT_FACTORY, initialContextFactoryName);
-        	env.put(Context.PROVIDER_URL, providerURL);
-        	  
-            jndiContext = new InitialContext(env);
-        } catch (NamingException e) {
-        	throw new ConfigurationException(e);
-        }
-        
-        try {
-            connectionFactory = (TopicConnectionFactory) jndiContext.lookup("ConnectionFactory");
-            topic = (Topic) jndiContext.lookup(topicName);
-        } catch (NamingException e) {
-        	throw new ConfigurationException(e);
-        }
-        System.out.println("JMS - done");
+		
+		if (jms == null)
+			//XXX: log error!!!
+			return;
+		
+		jms.startUp(broker);
+		
+		if (collector != null)
+			collector.start(broker);
+
+		JMSSender sender = new JMSSender();
+		
+		TopicConnectionFactory cf = jms.connectionFactory;
+		sender.setConnectionFactory(cf);
+		sender.setTopic(jms.topic);
+		
+		appender = new SenderAppender(manager, sender);
+		appender.setName("JMX log appender");
+		
+		Logger logger = Logger.getRootLogger();
+		logger.addAppender(appender);
+		
+		@SuppressWarnings({ "deprecation", "unchecked" })
+		Enumeration<Category> cats = Logger.getCurrentCategories();
+		while (cats.hasMoreElements()) {
+			cats.nextElement().addAppender(appender);
+		}
+		System.out.println("appender done");
 	}
 
 	@Override
@@ -104,8 +107,20 @@ public class JMS implements Configurable, LifeCycle {
 
 	@Override
 	public void stop(DBBroker broker) throws EXistException {
-	}
+		Logger logger = Logger.getRootLogger();
+		logger.removeAppender(appender);
+		
+		@SuppressWarnings({ "deprecation", "unchecked" })
+		Enumeration<Category> cats = Logger.getCurrentCategories();
+		while (cats.hasMoreElements()) {
+			cats.nextElement().removeAppender(appender);
+		}
+		
+		jms.stop(broker);
 
+		if (collector != null)
+			collector.shutdown();
+	}
 
 	@Override
 	public boolean isConfigured() {

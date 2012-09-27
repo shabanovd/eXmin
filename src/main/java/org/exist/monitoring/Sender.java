@@ -21,13 +21,11 @@
  */
 package org.exist.monitoring;
 
-import java.io.Serializable;
-
 /**
  * @author <a href="mailto:shabanovd@gmail.com">Dmitriy Shabanov</a>
  *
  */
 public interface Sender {
 	
-	public void send(final Serializable object);
+	public void send(final String object);
 }
