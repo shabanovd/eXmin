@@ -33,13 +33,22 @@ declare function local:send-request($server) {
     }
 };
 
-declare function local:mail-server-down($server) {
-    if (server:last-heartbeat-check($server)/jmx:jmx/@http:status eq "200") then
+(: report only ones after server gets up :)
+declare function local:mail-server-up($server, $hb) {
+    if ($hb/@http:status/string(.) eq "fail") then
+        let $mail := mailing:server-up($server)
+        return ()
+	else
+		()
+};
+
+(: report only ones after server gets down :)
+declare function local:mail-server-down($server, $hb) {
+    if ($hb/@http:status/string(.) eq "200") then
         let $mail := mailing:server-down($server)
         return ()
-    else
-        let $mail := mailing:server-up($server)
-		return ()
+	else
+		()
 };
 
 declare function local:collect-details($server) {
@@ -50,14 +59,18 @@ declare function local:collect-details($server) {
 	let $tmp := local:mkcol("/db", $colName)
     
     let $response := $answer[1]
+	let $last_hb := server:last-heartbeat-check($server)
 	return
 		xmldb:store(concat("/db", $colName), concat(xsl:format-dateTime($TS, "YYYY-MM-DD'T'hh-mm-ss"),".xml"), 
 			<eXmin:heartbeat>
 				{attribute {"http:status"} {$response/@status}, attribute {"eXmin:date"} {$TS},
 				if ($response/@status eq "200") then
-					$answer[2]/jmx:jmx
+                    let $tmp := local:mail-server-up($server,$last_hb)
+					return
+						$answer[2]/jmx:jmx
+
 				else 
-                    local:mail-server-down($server)
+                    local:mail-server-down($server,$last_hb)
 				}
 			</eXmin:heartbeat>
 		)

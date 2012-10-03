@@ -117,7 +117,7 @@ declare function server:status-report() {
 		{
 		    for $server in //eXmin:server return
 			    let $details := server:last-heartbeat-check($server) 
-                let $lastCheck := current-dateTime() - $details/@eXmin:date/xs:dateTime(.)
+                let $lastCheck := util:system-dateTime() - $details/@eXmin:date/xs:dateTime(.)
 				return
 				    <tr>
 					    <td>{$server/eXmin:name}</td>

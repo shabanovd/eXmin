@@ -12,9 +12,9 @@ declare function mailing:mail($message) {
             <property name="mail.smtp.starttls.enable" value="true"/>
             <property name="mail.smtp.auth" value="true"/>
             <property name="mail.smtp.port" value="587"/>
-            <property name="mail.smtp.host" value="smtp.gmail.com"/>
-            <property name="mail.smtp.user" value="alert@jorsek.com"/>
-            <property name="mail.smtp.password"  value="isendthings4u"/>
+            <property name="mail.smtp.host" value="smtp.example.com"/>
+            <property name="mail.smtp.user" value="account@example.com"/>
+            <property name="mail.smtp.password"  value="passwd"/>
         </properties>
 
     (: It throws an exception when there has been some problem composing or sending the e-mails :)
