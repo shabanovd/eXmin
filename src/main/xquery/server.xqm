@@ -87,6 +87,21 @@ declare function server:generate-status-bars($details) {
 	</td>
 };
 
+declare function server:eXist-version($details, $lastCheck) {
+	if ($details) then
+		let $SystemInfo := $details//jmx:SystemInfo[@name eq "org.exist.management:type=SystemInfo"]
+		return concat($SystemInfo/jmx:ExistVersion, ", rev ", $SystemInfo/jmx:SvnRevision)
+	else
+		()
+};
+
+declare function server:java-version($details, $lastCheck) {
+	if ($details) then
+		$details//jmx:RuntimeImpl//jmx:row[jmx:key eq "java.runtime.version"]/jmx:value/text()
+	else
+		()
+};
+
 declare function server:generate-status-flag($details, $lastCheck) {
 	if ($details/@http:status eq "200") then
         if ($lastCheck le xs:dayTimeDuration("PT10M")) then
@@ -106,6 +121,8 @@ declare function server:status-report() {
         <thead>
 		    <tr>
 			    <th>Name</th>
+			    <th>Version</th>
+			    <th>Java</th>
 				<th>Uptime</th>
 				<th>Health</th>
 				<th>Sanity report</th>
@@ -121,6 +138,8 @@ declare function server:status-report() {
 				return
 				    <tr>
 					    <td>{$server/eXmin:name}</td>
+					    <td>{server:eXist-version($details, $lastCheck)}</td>
+					    <td>{server:java-version($details, $lastCheck)}</td>
 						<td>{utils:msecsToDHM($details/jmx:jmx/jmx:Database/jmx:Uptime/text()/number())}</td>
 						{server:generate-status-bars($details/jmx:jmx)}
 						<td></td>

@@ -93,6 +93,6 @@ return
 				</fieldset>
 			</div>
 		</div>
-		<p class="copyright">Copyright &#169; 2011 <a title="eXist-db Open Source Native XML Database." href="http://exist-db.org">eXist-DB</a> All rights reserved.</p>
+		<p class="copyright">Copyright &#169; 2012 <a title="eXist-db Open Source Native XML Database." href="http://exist-db.org">eXist-DB</a> All rights reserved.</p>
 	</body>
 </html>

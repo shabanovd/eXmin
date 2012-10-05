@@ -14,10 +14,12 @@ let $URL : = concat($exist:prefix, $exist:controller, '/')
 
 let $query := request:get-parameter("q", ())
 
+(:
 let $tmp := util:log-system-out($action)
 let $tmp := util:log-system-out($exist:path)
 let $tmp := util:log-system-out($URL)
 let $tmp := util:log-system-out(sm:is-externally-authenticated())
+:)
 return
 if ($action eq 'logout') then
 	<dispatch xmlns="http://exist.sourceforge.net/NS/exist">
