@@ -55,13 +55,15 @@ declare function local:collect-details($server) {
     let $answer := local:send-request($server)
 
     let $TS := xs:string(util:system-dateTime())
+
 	let $colName := concat("/data/",$server/@id,"/",substring($TS, 1, 4),"/",substring($TS, 6, 2),"/heartbeats")
+	let $lastColName := concat("/data/last/",$server/@id,"/","/heartbeats")
+
 	let $tmp := local:mkcol("/db", $colName)
     
     let $response := $answer[1]
 	let $last_hb := server:last-heartbeat-check($server)
-	return
-		xmldb:store(concat("/db", $colName), concat(xsl:format-dateTime($TS, "YYYY-MM-DD'T'hh-mm-ss"),".xml"), 
+	let $hb := 
 			<eXmin:heartbeat>
 				{attribute {"http:status"} {$response/@status}, attribute {"eXmin:date"} {$TS},
 				if ($response/@status eq "200") then
@@ -73,7 +75,10 @@ declare function local:collect-details($server) {
                     local:mail-server-down($server,$last_hb)
 				}
 			</eXmin:heartbeat>
-		)
+
+	let $tmp := xmldb:store(concat("/db", $colName), concat(xsl:format-dateTime($TS, "YYYY-MM-DD'T'hh-mm-ss"),".xml"), hb) 
+	let $tmp := xmldb:store(concat("/db", $lastColName), concat(xsl:format-dateTime($TS, "YYYY-MM-DD'T'hh-mm-ss"),".xml"), hb) 
+	return "done"
 };
 
 for $server in //eXmin:server return
