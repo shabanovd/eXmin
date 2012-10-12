@@ -8,21 +8,6 @@ declare namespace jmx="http://exist-db.org/jmx";
  
 declare option exist:serialize "method=xhtml media-type=text/html";
 
-declare function local:mkcol-recursive($collection, $components) {
-    if (exists($components)) then
-        let $newColl := concat($collection, "/", $components[1])
-        return (
-            xmldb:create-collection($collection, $components[1]),
-            local:mkcol-recursive($newColl, subsequence($components, 2))
-        )
-    else
-        ()
-};
-
-declare function local:mkcol($collection, $path) {
-    local:mkcol-recursive($collection, tokenize($path, "/"))
-};
-
 declare function local:send-request($server) {
     try {
         http:send-request(
@@ -51,16 +36,24 @@ declare function local:mail-server-down($server, $hb) {
 		()
 };
 
+declare function local:clean-last-details($server) {
+	let $colName := server:last-heartbeat-collection($server)
+	let $col := collection($colName)
+	let $TS := util:system-dateTime() - xs:dayTimeDuration('PT2H')
+
+	let $res := $col//eXmin:heartbeat[@eXmin:date/xs:dateTime(.) lt $TS]
+
+	return
+		for $uri in $res/base-uri(.) return
+			xmldb:remove($colName, substring-after($uri, $colName))
+};
+
+
 declare function local:collect-details($server) {
     let $answer := local:send-request($server)
 
     let $TS := xs:string(util:system-dateTime())
 
-	let $colName := concat("/data/",$server/@id,"/",substring($TS, 1, 4),"/",substring($TS, 6, 2),"/heartbeats")
-	let $lastColName := concat("/data/last/",$server/@id,"/","/heartbeats")
-
-	let $tmp := local:mkcol("/db", $colName)
-    
     let $response := $answer[1]
 	let $last_hb := server:last-heartbeat-check($server)
 	let $hb := 
@@ -76,8 +69,11 @@ declare function local:collect-details($server) {
 				}
 			</eXmin:heartbeat>
 
-	let $tmp := xmldb:store(concat("/db", $colName), concat(xsl:format-dateTime($TS, "YYYY-MM-DD'T'hh-mm-ss"),".xml"), hb) 
-	let $tmp := xmldb:store(concat("/db", $lastColName), concat(xsl:format-dateTime($TS, "YYYY-MM-DD'T'hh-mm-ss"),".xml"), hb) 
+	let $file-name := concat(xsl:format-dateTime($TS, "YYYY-MM-DD'T'hh-mm-ss"),".xml")
+
+	let $tmp := xmldb:store(server:heartbeat-collection($server, $TS), $file-name, $hb)
+	let $tmp := xmldb:store(server:last-heartbeat-collection($server), $file-name, $hb)
+	let $tmp := local:clean-last-details($server)
 	return "done"
 };
 

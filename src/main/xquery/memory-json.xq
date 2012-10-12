@@ -4,6 +4,7 @@ declare namespace eXmin="eXmin";
 declare namespace jmx="http://exist-db.org/jmx";
 declare namespace json="http://www.json.org";
 
+
 declare option exist:serialize "method=json media-type=text/javascript";
 
 let $end := datetime:timestamp()
@@ -12,12 +13,14 @@ let $end := request:get-parameter("end", $end)
 let $serverId := request:get-parameter("serverId", util:uuid())
 let $callback := request:get-parameter("callback", ())
 
+(:
 let $tmp := util:log-system-out($serverId)
+:)
 
 let $stDT := datetime:timestamp-to-datetime($start)
 let $enDT := datetime:timestamp-to-datetime($end)
 
-let $range := collection(concat('/db/data/',$serverId))//eXmin:heartbeat[@eXmin:date/xs:dateTime(.) gt $stDT and @eXmin:date/xs:dateTime(.) lt $enDT]
+let $range := collection(concat('/db/data/last/',$serverId))//eXmin:heartbeat[@eXmin:date/xs:dateTime(.) gt $stDT and @eXmin:date/xs:dateTime(.) lt $enDT]
 
 let $res :=
 <test>

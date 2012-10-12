@@ -2,6 +2,21 @@ xquery version "3.0";
 
 module namespace utils='eXmin/utils';
 
+declare function utils:mkcol-recursive($collection, $components) {
+    if (exists($components)) then
+        let $newColl := concat($collection, "/", $components[1])
+        return (
+            xmldb:create-collection($collection, $components[1]),
+            utils:mkcol-recursive($newColl, subsequence($components, 2))
+        )
+    else
+        ()
+};
+
+declare function utils:mkcol($collection, $path) {
+    utils:mkcol-recursive($collection, tokenize($path, "/"))
+};
+
 declare function utils:percent($current, $max) {
     (number($current) div number($max)) * 100
 };

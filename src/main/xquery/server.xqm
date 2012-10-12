@@ -50,8 +50,24 @@ declare function server:add() {
     )
 };
 
+declare function server:heartbeat-collection($server, $TS) {
+	let $colName := concat("/data/",$server/@id,"/",substring($TS, 1, 4),"/",substring($TS, 6, 2),"/heartbeats")
+
+	let $tmp := utils:mkcol("/db", $colName)
+
+	return concat("/db", $colName)
+};
+
+declare function server:last-heartbeat-collection($server) {
+	let $colName := concat("/data/last/",$server/@id,"/","/heartbeats")
+
+	let $tmp := utils:mkcol("/db", $colName)
+	
+	return concat("/db", $colName)
+};
+
 declare function server:last-heartbeat-check($server) {
-    let $col := collection(concat("/db/data/",$server/@id))
+    let $col := collection(server:last-heartbeat-collection($server))
 
 	let $lastTS := max($col//eXmin:heartbeat/@eXmin:date/xs:dateTime(.))
 
@@ -137,7 +153,7 @@ declare function server:status-report() {
                 let $lastCheck := util:system-dateTime() - $details/@eXmin:date/xs:dateTime(.)
 				return
 				    <tr>
-					    <td>{$server/eXmin:name}</td>
+					    <td><a href="memory-chart.xq?serverId={$server/@id/xs:string(.)}">{$server/eXmin:name}</a></td>
 					    <td>{server:eXist-version($details, $lastCheck)}</td>
 					    <td>{server:java-version($details, $lastCheck)}</td>
 						<td>{utils:msecsToDHM($details/jmx:jmx/jmx:Database/jmx:Uptime/text()/number())}</td>
